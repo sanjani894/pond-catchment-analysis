@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+
+<Placemark>
+    <name>250</name>
+    <LineString>
+        <coordinates>
+            81.280,21.240,0
+            81.290,21.240,0
+            81.300,21.245,0
+            81.290,21.250,0
+            81.280,21.240,0
+        </coordinates>
+    </LineString>
+</Placemark>
+
+<Placemark>
+    <name>255</name>
+    <LineString>
+        <coordinates>
+            81.282,21.242,0
+            81.288,21.242,0
+            81.296,21.246,0
+            81.288,21.248,0
+            81.282,21.242,0
+        </coordinates>
+    </LineString>
+</Placemark>
+
+<Placemark>
+    <name>260</name>
+    <LineString>
+        <coordinates>
+            81.284,21.244,0
+            81.287,21.244,0
+            81.292,21.246,0
+            81.287,21.248,0
+            81.284,21.244,0
+        </coordinates>
+    </LineString>
+</Placemark>
+
+<Placemark>
+    <name>265</name>
+    <LineString>
+        <coordinates>
+            81.286,21.245,0
+            81.287,21.245,0
+            81.289,21.246,0
+            81.287,21.247,0
+            81.286,21.245,0
+        </coordinates>
+    </LineString>
+</Placemark>
+
+</Document>
+</kml>
