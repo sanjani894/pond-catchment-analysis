@@ -32,7 +32,7 @@ analyzeButton.addEventListener("click", async () => {
 
   const formData = new FormData();
 
-  formData.append("file", file);
+  formData.append("contour_map", file);
 
   try {
     const response = await fetch(API_URL, {

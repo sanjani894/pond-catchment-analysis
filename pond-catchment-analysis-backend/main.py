@@ -63,16 +63,14 @@ def root():
 
 
 @app.post("/analyzeContour")
-async def analyze_contour(
-    file: UploadFile = File(...)
-):
+async def analyze_contour(contour_map: UploadFile = File(...)):
     try:
 
         # -------------------------------------------------
         # 1. Read uploaded contour file
         # -------------------------------------------------
 
-        file_bytes = await file.read()
+        file_bytes = await contour_map.read()
 
         # -------------------------------------------------
         # 2. Parse contour map
@@ -80,7 +78,7 @@ async def analyze_contour(
 
         result = parse_contours(
             file_bytes=file_bytes,
-            filename=file.filename or ""
+            filename=contour_map.filename or ""
         )
 
         # -------------------------------------------------
