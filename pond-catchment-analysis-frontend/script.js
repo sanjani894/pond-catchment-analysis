@@ -1,4 +1,4 @@
-const API_URL = "https://pond-catchment-analysis.onrender.com/analyzeContour";
+const API_URL = "http://10.1.75.51:5226/analyzeContour";
 
 const fileInput = document.getElementById("contourFile");
 const analyzeButton = document.getElementById("analyzeButton");
