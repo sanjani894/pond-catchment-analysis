@@ -7,6 +7,16 @@
     <title>Pond Catchment Analysis</title>
 
     <link rel="stylesheet" href="style.css" />
+
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"
+    />
   </head>
 
   <body>
@@ -33,7 +43,19 @@
       </section>
 
       <!-- Results Section -->
-      <section id="results" class="results hidden">
+              <!-- Map Section -->
+        <section class="map-card" id="mapSection">
+          <h2>Select Land Area</h2>
+          <p class="description">
+            Draw a rectangle on the map to select the land area for analysis.
+          </p>
+          <div id="map"></div>
+          <p id="mapStatus">
+            Upload a contour map to display its terrain on the map.
+          </p>
+        </section>
+
+<section id="results" class="results hidden">
         <h2>Analysis Results</h2>
 
         <!-- Best Candidate -->
@@ -86,6 +108,10 @@
         </div>
       </section>
     </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 
     <script src="script.js"></script>
   </body>

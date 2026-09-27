@@ -11,3 +11,8 @@ node_modules/
 # OS
 .DS_Store
 Thumbs.db
+
+# Generated runtime/test files
+*.log
+result.json
+multipart_test.py

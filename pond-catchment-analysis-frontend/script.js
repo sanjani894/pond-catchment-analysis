@@ -1,4 +1,4 @@
-const API_URL = "http://10.1.75.51:5226/analyzeContour";
+const API_URL = "/analyzeContour";
 
 const fileInput = document.getElementById("contourFile");
 const analyzeButton = document.getElementById("analyzeButton");
@@ -10,9 +10,16 @@ const terrainInfo = document.getElementById("terrainInfo");
 const flowInfo = document.getElementById("flowInfo");
 const satelliteInfo = document.getElementById("satelliteInfo");
 const candidateTable = document.getElementById("candidateTable");
+let selectedBounds = null;
+let resultMarker = null;
+let catchmentLayer = null;
 
 analyzeButton.addEventListener("click", async () => {
   const file = fileInput.files[0];
+  if (!selectedBounds) {
+    statusText.textContent = "Please select a land area on the map first.";
+    return;
+  }
 
   if (!file) {
     statusText.textContent = "Please select a KML or KMZ file.";
@@ -33,6 +40,10 @@ analyzeButton.addEventListener("click", async () => {
   const formData = new FormData();
 
   formData.append("contour_map", file);
+  formData.append("min_latitude", selectedBounds.min_latitude);
+  formData.append("max_latitude", selectedBounds.max_latitude);
+  formData.append("min_longitude", selectedBounds.min_longitude);
+  formData.append("max_longitude", selectedBounds.max_longitude);
 
   try {
     const response = await fetch(API_URL, {
@@ -77,6 +88,8 @@ function displayResults(data) {
   displaySatellite(data.satellite_water_detection);
 
   displayCandidates(candidates);
+  displayResultMarker(candidates[0]);
+  displayCatchment(candidates[0].catchment);
 
   resultsSection.scrollIntoView({
     behavior: "smooth",
@@ -313,4 +326,204 @@ function formatNumber(value) {
   return Number(value).toLocaleString("en-IN", {
     maximumFractionDigits: 2,
   });
+}
+
+/* -------------------------------------------------
+   Interactive Leaflet Map
+------------------------------------------------- */
+
+const mapElement = document.getElementById("map");
+mapElement.style.height = "500px";
+
+const map = L.map("map").setView([21.24, 81.29], 13);
+window.pondMap = map;
+
+L.tileLayer(
+  "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+  {
+    maxZoom: 19,
+    attribution: "&copy; OpenStreetMap contributors",
+  }
+).addTo(map);
+
+const drawnItems = new L.FeatureGroup();
+map.addLayer(drawnItems);
+
+const drawControl = new L.Control.Draw({
+  edit: {
+    featureGroup: drawnItems,
+  },
+  draw: {
+    polygon: false,
+    polyline: false,
+    circle: false,
+    circlemarker: false,
+    marker: false,
+    rectangle: true,
+  },
+});
+
+map.addControl(drawControl);
+
+map.on(L.Draw.Event.CREATED, function (event) {
+  drawnItems.clearLayers();
+
+  const layer = event.layer;
+  drawnItems.addLayer(layer);
+
+  const bounds = layer.getBounds();
+    selectedBounds = {
+      min_latitude: bounds.getSouth(),
+      max_latitude: bounds.getNorth(),
+      min_longitude: bounds.getWest(),
+      max_longitude: bounds.getEast()
+    };
+
+  document.getElementById("mapStatus").textContent =
+    `Selected area: ${bounds.getSouth().toFixed(5)}, ` +
+    `${bounds.getWest().toFixed(5)} to ` +
+    `${bounds.getNorth().toFixed(5)}, ` +
+    `${bounds.getEast().toFixed(5)}`;
+});
+
+/* -------------------------------------------------
+   Fit map to uploaded KML/KMZ
+------------------------------------------------- */
+
+async function fitMapToContourFile(file) {
+  try {
+    let kmlText;
+
+    if (file.name.toLowerCase().endsWith(".kmz")) {
+      const zip = await JSZip.loadAsync(file);
+      const kmlEntry = Object.keys(zip.files).find(
+        (name) => name.toLowerCase().endsWith(".kml")
+      );
+
+      if (!kmlEntry) {
+        throw new Error("No KML file found inside KMZ.");
+      }
+
+      kmlText = await zip.files[kmlEntry].async("text");
+    } else {
+      kmlText = await file.text();
+    }
+
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(kmlText, "application/xml");
+
+    const coordinates = xml.getElementsByTagNameNS(
+      "http://www.opengis.net/kml/2.2",
+      "coordinates"
+    );
+
+    const bounds = L.latLngBounds([]);
+    let pointCount = 0;
+
+    for (const element of coordinates) {
+      const text = (element.textContent || "").trim();
+
+      if (!text) {
+        continue;
+      }
+
+      for (const value of text.split(/\s+/)) {
+        const parts = value.split(",");
+
+        if (parts.length < 2) {
+          continue;
+        }
+
+        const longitude = Number(parts[0]);
+        const latitude = Number(parts[1]);
+
+        if (
+          Number.isFinite(latitude) &&
+          Number.isFinite(longitude)
+        ) {
+          bounds.extend([latitude, longitude]);
+          pointCount++;
+        }
+      }
+    }
+
+    if (!bounds.isValid() || pointCount === 0) {
+      throw new Error("No valid contour coordinates found.");
+    }
+
+    map.fitBounds(bounds.pad(0.05));
+
+    document.getElementById("mapStatus").textContent =
+      `Contour map loaded: ${pointCount.toLocaleString("en-IN")} points.`;
+  } catch (error) {
+    console.error("Map contour loading error:", error);
+
+    document.getElementById("mapStatus").textContent =
+      "Unable to display contour map on the map.";
+  }
+}
+
+fileInput.addEventListener("change", () => {
+  const file = fileInput.files[0];
+  if (!selectedBounds) {
+    statusText.textContent = "Please select a land area on the map first.";
+    return;
+  }
+
+  if (file) {
+    fitMapToContourFile(file);
+  }
+});
+
+
+function displayCatchment(catchment) {
+  if (catchmentLayer) {
+    map.removeLayer(catchmentLayer);
+  }
+
+  if (!catchment || !catchment.geojson) {
+    return;
+  }
+
+  catchmentLayer = L.geoJSON(catchment.geojson, {
+    style: {
+      weight: 3,
+      fillOpacity: 0.25
+    }
+  }).addTo(map);
+}
+
+function displayResultMarker(candidate) {
+  if (resultMarker) {
+    map.removeLayer(resultMarker);
+  }
+
+  resultMarker = L.marker([
+    candidate.latitude,
+    candidate.longitude
+  ]).addTo(map);
+
+  const catchment = candidate.catchment;
+  const runoff = candidate.runoff;
+  const storage = candidate.pond_storage;
+
+  resultMarker.bindPopup(`
+    <strong>Suggested Pond Location</strong><br><br>
+    <strong>Latitude:</strong> ${candidate.latitude.toFixed(6)}<br>
+    <strong>Longitude:</strong> ${candidate.longitude.toFixed(6)}<br>
+    <strong>Catchment:</strong> ${catchment.area_hectares.toFixed(2)} ha<br>
+    <strong>Expected Runoff:</strong> ${formatNumber(
+      runoff.estimated_runoff_volume_m3
+    )} m³<br>
+    <strong>Available Storage:</strong> ${formatNumber(
+      storage.estimated_available_storage_m3
+    )} m³
+  `);
+
+  map.setView([
+    candidate.latitude,
+    candidate.longitude
+  ], 16);
+
+  resultMarker.openPopup();
 }

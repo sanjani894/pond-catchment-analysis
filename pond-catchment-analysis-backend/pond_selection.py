@@ -140,7 +140,8 @@ def select_pond_candidates(
     minimum_distance_cells=10,
     accumulation_weight=0.7,
     elevation_weight=0.3,
-    water_checker=None
+    water_checker=None,
+    max_flow_accumulation=None
 ):
     """
     Select multiple distinct pond candidates.
@@ -193,7 +194,14 @@ def select_pond_candidates(
             direction="INVERSE"
         )
 
-                # Check existing or nearby water.
+                # Avoid extreme drainage-channel cells when requested.
+        if (
+            max_flow_accumulation is not None
+            and flow_accumulation[row, column] >= max_flow_accumulation
+        ):
+            continue
+
+        # Check existing or nearby water.
         near_water = False
 
         if water_checker is not None:

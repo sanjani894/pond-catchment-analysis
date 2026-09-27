@@ -73,10 +73,23 @@ def build_dem(contours, bounds, grid_size=100):
     points = np.array(points)
     elevations = np.array(elevations)
 
-    x_min = points[:, 0].min()
-    x_max = points[:, 0].max()
-    y_min = points[:, 1].min()
-    y_max = points[:, 1].max()
+    # Use the user-selected geographic bounds for the analysis grid.
+    # This makes the selected map rectangle control the DEM extent.
+    x_min, y_min = transformer.transform(
+        bounds["min_longitude"],
+        bounds["min_latitude"]
+    )
+
+    x_max, y_max = transformer.transform(
+        bounds["max_longitude"],
+        bounds["max_latitude"]
+    )
+
+    if x_min > x_max:
+        x_min, x_max = x_max, x_min
+
+    if y_min > y_max:
+        y_min, y_max = y_max, y_min
 
     x_grid = np.linspace(
         x_min,
