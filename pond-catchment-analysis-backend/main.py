@@ -6,6 +6,7 @@ from rasterio.transform import Affine
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from otel_metrics import MetricsMiddleware, metrics_app
 
 from external_apis import (
     get_elevation,
@@ -44,6 +45,43 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 ) 
+
+
+# OpenTelemetry tracing
+import logging
+from opentelemetry import trace
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s %(message)s"
+)
+
+otel_resource = Resource.create({
+    "service.name": "pond-catchment-analysis"
+})
+otel_provider = TracerProvider(resource=otel_resource)
+otel_exporter = OTLPSpanExporter(
+    endpoint="http://127.0.0.1:4317",
+    insecure=True
+)
+otel_provider.add_span_processor(BatchSpanProcessor(otel_exporter))
+trace.set_tracer_provider(otel_provider)
+FastAPIInstrumentor.instrument_app(app)
+
+logging.getLogger("pond-catchment").info(
+    "OpenTelemetry tracing initialized"
+)
+
+
+
+app.add_middleware(MetricsMiddleware)
+app.mount("/metrics", metrics_app)
+
 
 def catchment_mask_to_geojson(
     mask,
@@ -146,6 +184,9 @@ async def analyze_contour(
     min_longitude: float | None = Form(None),
     max_longitude: float | None = Form(None)
 ):
+    logging.getLogger("pond-catchment").info(
+         "Contour analysis request received"
+    )
     print(">>> ENTERED analyze_contour", flush=True)
     try:
 
