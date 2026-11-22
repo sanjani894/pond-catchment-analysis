@@ -1,4 +1,14 @@
-const API_URL = "/analyzeContour";
+window.onerror = function (msg, url, lineNo, columnNo, error) {
+  const el = document.getElementById("mapStatus");
+  if (el) {
+    el.style.color = "red";
+    el.style.fontWeight = "bold";
+    el.textContent = "JavaScript Error on line " + lineNo + ": " + msg;
+  }
+  console.error("Global Error:", msg, "at line", lineNo, error);
+  return false;
+};
+const API_URL = "http://127.0.0.1:8000/analyzeContour";
 
 const fileInput = document.getElementById("contourFile");
 const analyzeButton = document.getElementById("analyzeButton");
@@ -146,14 +156,14 @@ function displayBestCandidate(candidate) {
                 <strong>Estimated Runoff</strong>
                 <span>${formatNumber(
                   runoff.estimated_runoff_volume_m3,
-                )} m³</span>
+                )} mÂ³</span>
             </div>
 
             <div class="metric">
                 <strong>Available Storage Estimate</strong>
                 <span>${formatNumber(
                   storage.estimated_available_storage_m3,
-                )} m³</span>
+                )} mÂ³</span>
             </div>
 
             <div class="metric">
@@ -186,7 +196,7 @@ function displayTerrain(terrain) {
 
         <p>
             <strong>Grid:</strong>
-            ${terrain.grid_size} × ${terrain.grid_size}
+            ${terrain.grid_size} Ã— ${terrain.grid_size}
         </p>
 
         <p>
@@ -216,7 +226,7 @@ function displayFlow(direction, accumulation) {
 
         <p>
             <strong>Flow Grid:</strong>
-            ${direction.grid_rows} ×
+            ${direction.grid_rows} Ã—
             ${direction.grid_columns}
         </p>
 
@@ -306,11 +316,11 @@ function displayCandidates(candidates) {
             </td>
 
             <td>
-                ${formatNumber(runoff)} m³
+                ${formatNumber(runoff)} mÂ³
             </td>
 
             <td>
-                ${formatNumber(storage)} m³
+                ${formatNumber(storage)} mÂ³
             </td>
 
             <td class="recommendation ${recommendationClass}">
@@ -364,6 +374,8 @@ const drawControl = new L.Control.Draw({
 });
 
 map.addControl(drawControl);
+
+setTimeout(() => { if (map) map.invalidateSize(); }, 250);
 
 map.on(L.Draw.Event.CREATED, function (event) {
   drawnItems.clearLayers();
@@ -514,10 +526,10 @@ function displayResultMarker(candidate) {
     <strong>Catchment:</strong> ${catchment.area_hectares.toFixed(2)} ha<br>
     <strong>Expected Runoff:</strong> ${formatNumber(
       runoff.estimated_runoff_volume_m3
-    )} m³<br>
+    )} mÂ³<br>
     <strong>Available Storage:</strong> ${formatNumber(
       storage.estimated_available_storage_m3
-    )} m³
+    )} mÂ³
   `);
 
   map.setView([

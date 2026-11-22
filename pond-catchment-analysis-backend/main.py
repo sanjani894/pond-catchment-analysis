@@ -1,4 +1,4 @@
-import numpy as np
+﻿import numpy as np
 import requests
 
 from rasterio.features import shapes
@@ -6,7 +6,10 @@ from rasterio.transform import Affine
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from otel_metrics import MetricsMiddleware, metrics_app
+try:
+    from otel_metrics import MetricsMiddleware, metrics_app
+except Exception:
+    MetricsMiddleware, metrics_app = None, None
 
 from external_apis import (
     get_elevation,
@@ -47,40 +50,34 @@ app.add_middleware(
 ) 
 
 
-# OpenTelemetry tracing
+# OpenTelemetry tracing (optional)
 import logging
-from opentelemetry import trace
-from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s %(message)s"
 )
 
-otel_resource = Resource.create({
-    "service.name": "pond-catchment-analysis"
-})
-otel_provider = TracerProvider(resource=otel_resource)
-otel_exporter = OTLPSpanExporter(
-    endpoint="http://127.0.0.1:4317",
-    insecure=True
-)
-otel_provider.add_span_processor(BatchSpanProcessor(otel_exporter))
-trace.set_tracer_provider(otel_provider)
-FastAPIInstrumentor.instrument_app(app)
+try:
+    from opentelemetry import trace
+    from opentelemetry.sdk.resources import Resource
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor
+    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
-logging.getLogger("pond-catchment").info(
-    "OpenTelemetry tracing initialized"
-)
+    otel_resource = Resource.create({"service.name": "pond-catchment-analysis"})
+    otel_provider = TracerProvider(resource=otel_resource)
+    otel_exporter = OTLPSpanExporter(endpoint="http://127.0.0.1:4317", insecure=True)
+    otel_provider.add_span_processor(BatchSpanProcessor(otel_exporter))
+    trace.set_tracer_provider(otel_provider)
+    FastAPIInstrumentor.instrument_app(app)
+    logging.getLogger("pond-catchment").info("OpenTelemetry tracing initialized")
+except Exception as e:
+    logging.getLogger("pond-catchment").info(f"OpenTelemetry tracing skipped: {e}")
 
-
-
-app.add_middleware(MetricsMiddleware)
-app.mount("/metrics", metrics_app)
+if MetricsMiddleware and metrics_app:
+    app.add_middleware(MetricsMiddleware)
+    app.mount("/metrics", metrics_app)
 
 
 def catchment_mask_to_geojson(
